@@ -2,12 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JobClaimService } from '../jobs/job-claim.service';
 import { WorkerRunnerService } from '../worker/worker-runner.service';
 import { ProgressPublisherService } from '../progress/progress-publisher.service';
-import type { GraphDefinition } from '../graph/graph-definition.types';
-
-interface RunJobInput {
-  definition: GraphDefinition;
-  input: { input: string };
-}
+import type { WorkerData } from '../worker/worker-messages.types';
 
 @Injectable()
 export class ExecutionOrchestratorService {
@@ -28,7 +23,14 @@ export class ExecutionOrchestratorService {
       );
     }
 
-    const runInput = job.input as RunJobInput;
+    const runInput = job.input as WorkerData;
+
+    // Set right before/after the in-loop fail() call so the catch block below
+    // can tell "a worker-reported error was already recorded as failed" apart
+    // from "something else (e.g. a transient DB error) blew up mid-run" and
+    // avoid publishing/failing a second time for the same job in the former
+    // case.
+    let alreadyFailed = false;
 
     try {
       for await (const message of this.workerRunnerService.run({
@@ -37,12 +39,21 @@ export class ExecutionOrchestratorService {
       })) {
         await this.progressPublisherService.publish(job.id, message);
         if (message.kind === 'error') {
+          alreadyFailed = true;
           await this.jobClaimService.fail(job.id, message.message);
           return true;
         }
       }
       await this.jobClaimService.complete(job.id);
     } catch (err) {
+      if (alreadyFailed) {
+        // The job is already terminally 'failed' with the worker's original
+        // error message; jobClaimService.fail() itself is what threw here.
+        // Don't publish a second NOTIFY or overwrite the failure with this
+        // unrelated write error - surface it by letting the promise reject.
+        throw err;
+      }
+
       const errorMessage = err instanceof Error ? err.message : String(err);
       await this.progressPublisherService.publish(job.id, {
         kind: 'error',

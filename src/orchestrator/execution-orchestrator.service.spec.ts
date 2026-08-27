@@ -78,4 +78,37 @@ describe('ExecutionOrchestratorService', () => {
     const ran = await orchestrator.processNext();
     expect(ran).toBe(false);
   });
+
+  it('throws when the claimed job is not a run job', async () => {
+    await seedJob(db, {
+      type: 'resume',
+      input: { input: { input: 'hi' } },
+    });
+
+    await expect(orchestrator.processNext()).rejects.toThrow(
+      "ExecutionOrchestratorService only handles 'run' jobs in this plan; got 'resume'",
+    );
+  });
+
+  it('fails the job exactly once when the worker emits a kind:error message', async () => {
+    const seeded = await seedJob(db, {
+      input: {
+        definition: {
+          entryNodeId: 'llm-1',
+          nodes: [],
+          edges: [],
+        },
+        input: { input: 'hi' },
+      },
+    });
+
+    const ran = await orchestrator.processNext();
+    expect(ran).toBe(true);
+
+    const [row] = await db.select().from(jobs).where(eq(jobs.id, seeded.id));
+    expect(row.status).toBe('failed');
+    expect(row.error).toContain(
+      'GraphInterpreter currently supports exactly one llm node',
+    );
+  }, 15000);
 });
