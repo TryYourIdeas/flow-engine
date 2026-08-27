@@ -22,6 +22,8 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.9",
+    "@langchain/langgraph": "^1.4.12",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
