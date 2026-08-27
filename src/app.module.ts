@@ -1,4 +1,4 @@
-import { Module, type OnModuleInit } from '@nestjs/common';
+import { Logger, Module, type OnModuleInit } from '@nestjs/common';
 import { createDb } from './db/client';
 import { JobClaimService } from './jobs/job-claim.service';
 import { WorkerRunnerService } from './worker/worker-runner.service';
@@ -27,6 +27,8 @@ const { db, pool } = createDb(
   ],
 })
 export class AppModule implements OnModuleInit {
+  private readonly logger = new Logger(AppModule.name);
+
   constructor(private readonly orchestrator: ExecutionOrchestratorService) {}
 
   onModuleInit() {
@@ -35,7 +37,15 @@ export class AppModule implements OnModuleInit {
 
   private async pollLoop() {
     while (true) {
-      const ran = await this.orchestrator.processNext();
+      let ran = false;
+      try {
+        ran = await this.orchestrator.processNext();
+      } catch (err) {
+        this.logger.error(
+          `poll loop iteration failed: ${err instanceof Error ? err.message : String(err)}`,
+          err instanceof Error ? err.stack : undefined,
+        );
+      }
       await new Promise((resolve) => setTimeout(resolve, ran ? 0 : 1000));
     }
   }
