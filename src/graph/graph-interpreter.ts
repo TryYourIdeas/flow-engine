@@ -33,6 +33,11 @@ export class GraphInterpreter {
     }
 
     const node = definition.nodes[0];
+    // Events are buffered here, not streamed incrementally: no token is
+    // yielded to the caller until `graph.invoke()` below fully resolves.
+    // True incremental delivery is deferred to Task 5, once the
+    // worker_thread message-passing boundary exists to carry tokens out
+    // as they're produced.
     const events: InterpreterEvent[] = [];
 
     const graph = new StateGraph(ExecutionState)
@@ -55,6 +60,8 @@ export class GraphInterpreter {
 
     await graph.invoke({ input: input.input, output: '' });
 
+    // Only reached once invoke() has fully resolved, so this is where
+    // buffered events are finally handed to the caller.
     for (const event of events) {
       yield event;
     }
