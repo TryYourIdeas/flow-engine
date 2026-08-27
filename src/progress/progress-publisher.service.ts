@@ -8,7 +8,7 @@ export class ProgressPublisherService {
 
   async publish(runId: string, message: WorkerMessage): Promise<void> {
     const channel = `run:${runId}`;
-    const payload = JSON.stringify(message).replace(/'/g, "''");
-    await this.pool.query(`NOTIFY "${channel}", '${payload}'`);
+    const payload = JSON.stringify(message);
+    await this.pool.query('SELECT pg_notify($1, $2)', [channel, payload]);
   }
 }
