@@ -33,4 +33,29 @@ describe('WorkerRunnerService', () => {
     expect(messages[messages.length - 1]).toBe('done');
     expect(messages.filter((k) => k === 'token').length).toBeGreaterThan(0);
   }, 15000);
+
+  it('surfaces an error message when the graph definition is unsupported', async () => {
+    const invalidDefinition: GraphDefinition = {
+      entryNodeId: 'llm-1',
+      nodes: [],
+      edges: [],
+    };
+
+    const service = new WorkerRunnerService();
+    const messages: Array<{ kind: string; message?: string }> = [];
+
+    for await (const message of service.run({
+      definition: invalidDefinition,
+      input: { input: 'hi' },
+    })) {
+      messages.push(message);
+    }
+
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage.kind).toBe('error');
+    expect(lastMessage.message).toContain(
+      'GraphInterpreter currently supports exactly one llm node',
+    );
+    expect(messages.some((m) => m.kind === 'done')).toBe(false);
+  }, 15000);
 });

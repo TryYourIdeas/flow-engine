@@ -35,6 +35,17 @@ export class WorkerRunnerService {
       resolveNext?.();
     });
 
+    worker.on('exit', (code: number) => {
+      if (!finished) {
+        messages.push({
+          kind: 'error',
+          message: `worker exited unexpectedly (code ${code})`,
+        });
+        finished = true;
+        resolveNext?.();
+      }
+    });
+
     try {
       while (true) {
         while (messages.length > 0) {

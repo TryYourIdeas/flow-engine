@@ -21,7 +21,10 @@ async function main() {
     }
     post({ kind: 'done' });
   } catch (err) {
-    post({ kind: 'error', message: (err as Error).message });
+    post({
+      kind: 'error',
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
