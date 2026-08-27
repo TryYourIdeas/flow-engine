@@ -54,6 +54,9 @@ describe('ExecutionOrchestratorService', () => {
         process.env.DATABASE_URL ??
         'postgres://flow_engine:flow_engine@localhost:5433/flow_engine',
     });
+    listener.on('error', (err) => {
+      console.error('test LISTEN client error:', err);
+    });
     await listener.connect();
     await listener.query(`LISTEN "run:${seeded.id}"`);
     const receivedTokens: string[] = [];

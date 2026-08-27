@@ -14,6 +14,9 @@ describe('ProgressPublisherService', () => {
 
   it('publishes an event that a LISTEN client receives on run:<id>', async () => {
     const listener = new Client({ connectionString });
+    listener.on('error', (err) => {
+      console.error('test LISTEN client error:', err);
+    });
     await listener.connect();
     await listener.query('LISTEN "run:job-123"');
 
@@ -40,6 +43,9 @@ describe('ProgressPublisherService', () => {
 
   it('publishes a token payload containing quotes and backslashes without corruption', async () => {
     const listener = new Client({ connectionString });
+    listener.on('error', (err) => {
+      console.error('test LISTEN client error:', err);
+    });
     await listener.connect();
     await listener.query('LISTEN "run:job-456"');
 

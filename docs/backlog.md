@@ -35,3 +35,22 @@ process.
 
 **Consequence of not having it:** A single execution (buggy or, later, malicious) could exhaust
 host resources shared by other concurrent executions.
+
+## Orphaned `running`-status job recovery
+
+**Description:** If the process is killed while a job is claimed (`status = 'running'`) — a crash,
+an OOM kill, a forced `docker stop` without graceful shutdown, or even a graceful shutdown (see
+`main.ts`'s `app.enableShutdownHooks()` and `AppModule`'s `onModuleDestroy()`) that doesn't wait
+for an in-flight `processNext()` call to finish — nothing ever requeues or fails that job. It stays
+`running` forever. There is no reaper process, lease-expiry timestamp, or heartbeat mechanism to
+detect and recover stuck jobs. Graceful shutdown reduces but does not eliminate this risk: it only
+stops new poll iterations from starting, and a hard kill (SIGKILL, OOM) bypasses shutdown hooks
+entirely regardless.
+
+**Value:** Prevents jobs from being silently stuck in `running` state forever after an abnormal or
+even a normal-but-mid-job process exit, which would otherwise require manual database intervention
+to notice and fix.
+
+**Consequence of not having it:** Under real-world operational conditions (deploys, crashes, OOM
+kills), `running` jobs will accumulate that never complete and are never retried, with no automated
+way to detect or recover them short of a manual database query and update.

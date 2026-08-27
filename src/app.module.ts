@@ -1,4 +1,9 @@
-import { Logger, Module, type OnModuleInit } from '@nestjs/common';
+import {
+  Logger,
+  Module,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { createDb } from './db/client';
 import { JobClaimService } from './jobs/job-claim.service';
 import { WorkerRunnerService } from './worker/worker-runner.service';
@@ -12,8 +17,6 @@ const { db, pool } = createDb(
 
 @Module({
   providers: [
-    { provide: 'DB', useValue: db },
-    { provide: 'PG_POOL', useValue: pool },
     {
       provide: JobClaimService,
       useFactory: () => new JobClaimService(db),
@@ -26,8 +29,9 @@ const { db, pool } = createDb(
     ExecutionOrchestratorService,
   ],
 })
-export class AppModule implements OnModuleInit {
+export class AppModule implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AppModule.name);
+  private stopping = false;
 
   constructor(private readonly orchestrator: ExecutionOrchestratorService) {}
 
@@ -35,8 +39,12 @@ export class AppModule implements OnModuleInit {
     this.pollLoop();
   }
 
+  onModuleDestroy() {
+    this.stopping = true;
+  }
+
   private async pollLoop() {
-    while (true) {
+    while (!this.stopping) {
       let ran = false;
       try {
         ran = await this.orchestrator.processNext();
