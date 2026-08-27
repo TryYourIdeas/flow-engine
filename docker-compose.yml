@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: flow_engine
+      POSTGRES_PASSWORD: flow_engine
+      POSTGRES_DB: flow_engine
+    ports:
+      - '5433:5432'
+    volumes:
+      # NOTE: postgres:18+ images require the volume mounted at
+      # /var/lib/postgresql (not /var/lib/postgresql/data) — mounting
+      # directly at .../data breaks on the pg_ctlcluster-style layout
+      # these images now use. See docker-library/postgres#1259.
+      - flow_engine_pg_data:/var/lib/postgresql
+
+volumes:
+  flow_engine_pg_data:
