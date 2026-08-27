@@ -42,4 +42,16 @@ export class JobClaimService {
       input: row.input,
     };
   }
+
+  async complete(jobId: string): Promise<void> {
+    await this.db.execute(sql`
+      UPDATE jobs SET status = 'completed', updated_at = now() WHERE id = ${jobId}
+    `);
+  }
+
+  async fail(jobId: string, error: string): Promise<void> {
+    await this.db.execute(sql`
+      UPDATE jobs SET status = 'failed', error = ${error}, updated_at = now() WHERE id = ${jobId}
+    `);
+  }
 }
