@@ -1,67 +1,117 @@
-import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
-import type { GraphDefinition } from './graph-definition.types';
+import {
+  StateGraph,
+  Annotation,
+  START,
+  END,
+  type BaseCheckpointSaver,
+} from '@langchain/langgraph';
+import type { GraphDefinition, GraphNode, StateField } from './graph-definition.types';
 import type { LlmProviderPort } from './llm-provider.port';
 
-const ExecutionState = Annotation.Root({
-  input: Annotation<string>,
-  output: Annotation<string>({
-    reducer: (existing, update) => existing + update,
-    default: () => '',
-  }),
-});
-
-export interface InterpreterInput {
-  input: string;
-}
-
 export interface InterpreterEvent {
+  kind: 'token';
   nodeId: string;
   token: string;
 }
 
+export interface InterpreterStartInput {
+  kind: 'start';
+  input: string;
+}
+
+export interface InterpreterResumeInput {
+  kind: 'resume';
+  resumeValues: Record<string, unknown>;
+}
+
+export type InterpreterInput = InterpreterStartInput | InterpreterResumeInput;
+
+// The graph's shape (which nodes/channels exist) is determined entirely by
+// runtime JSON (GraphDefinition), not known at compile time, so the
+// StateGraph builder chain below is intentionally untyped (`any`) rather
+// than fought into LangGraph JS's generic fluent-builder types.
+function buildStateAnnotation(fields: StateField[]) {
+  const spec: Record<string, unknown> = {
+    input: Annotation<string>(),
+    output: Annotation<string>({
+      reducer: (existing: string, update: string) => existing + update,
+      default: () => '',
+    }),
+  };
+  for (const field of fields) {
+    spec[field.key] = Annotation<unknown>();
+  }
+  return Annotation.Root(spec as never);
+}
+
+function buildNodeHandler(
+  node: GraphNode,
+  llmProvider: LlmProviderPort,
+  events: InterpreterEvent[],
+) {
+  if (node.type === 'llm') {
+    return async (state: Record<string, unknown>) => {
+      let output = '';
+      for await (const { token } of llmProvider.streamCompletion({
+        systemPrompt: node.data.systemPrompt,
+        model: node.data.model,
+        temperature: node.data.temperature,
+        input: state.input as string,
+      })) {
+        events.push({ kind: 'token', nodeId: node.id, token });
+        output += token;
+      }
+      return { output };
+    };
+  }
+
+  throw new Error(`Unsupported node type '${(node as GraphNode).type}'`);
+}
+
 export class GraphInterpreter {
-  constructor(private readonly llmProvider: LlmProviderPort) {}
+  constructor(
+    private readonly llmProvider: LlmProviderPort,
+    private readonly checkpointer: BaseCheckpointSaver,
+  ) {}
 
   async *run(
     definition: GraphDefinition,
+    runId: string,
     input: InterpreterInput,
   ): AsyncGenerator<InterpreterEvent> {
-    if (definition.nodes.length !== 1 || definition.nodes[0].type !== 'llm') {
-      throw new Error(
-        'GraphInterpreter currently supports exactly one llm node',
+    if (!definition.nodes.some((n) => n.id === definition.entryNodeId)) {
+      throw new Error(`Unknown entryNodeId '${definition.entryNodeId}'`);
+    }
+
+    const events: InterpreterEvent[] = [];
+    const stateAnnotation = buildStateAnnotation(definition.stateSchema.fields);
+    let graph: any = new StateGraph(stateAnnotation);
+
+    for (const node of definition.nodes) {
+      graph = graph.addNode(
+        node.id,
+        buildNodeHandler(node, this.llmProvider, events),
       );
     }
 
-    const node = definition.nodes[0];
-    // Events are buffered here, not streamed incrementally: no token is
-    // yielded to the caller until `graph.invoke()` below fully resolves.
-    // True incremental delivery is deferred to Task 5, once the
-    // worker_thread message-passing boundary exists to carry tokens out
-    // as they're produced.
-    const events: InterpreterEvent[] = [];
+    graph = graph.addEdge(START, definition.entryNodeId);
+    const hasOutgoing = new Set(definition.edges.map((e) => e.source));
+    for (const edge of definition.edges) {
+      graph = graph.addEdge(edge.source, edge.target);
+    }
+    for (const node of definition.nodes) {
+      if (!hasOutgoing.has(node.id)) {
+        graph = graph.addEdge(node.id, END);
+      }
+    }
 
-    const graph = new StateGraph(ExecutionState)
-      .addNode(node.id, async (state) => {
-        let output = '';
-        for await (const { token } of this.llmProvider.streamCompletion({
-          systemPrompt: node.data.systemPrompt,
-          model: node.data.model,
-          temperature: node.data.temperature,
-          input: state.input,
-        })) {
-          events.push({ nodeId: node.id, token });
-          output += token;
-        }
-        return { output };
-      })
-      .addEdge(START, node.id)
-      .addEdge(node.id, END)
-      .compile();
+    const compiled = graph.compile({ checkpointer: this.checkpointer });
+    const config = { configurable: { thread_id: runId } };
+    const invokeInput =
+      input.kind === 'start' ? { input: input.input } : input;
 
-    await graph.invoke({ input: input.input, output: '' });
+    await compiled.invoke(invokeInput, config);
 
-    // Only reached once invoke() has fully resolved, so this is where
-    // buffered events are finally handed to the caller.
     for (const event of events) {
       yield event;
     }
