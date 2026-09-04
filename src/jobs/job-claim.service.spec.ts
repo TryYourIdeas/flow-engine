@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { JobClaimService } from './job-claim.service';
 import { testDb, seedJob, clearJobs } from '../db/test/seed';
+import { jobs } from '../db/schema/public';
 
 describe('JobClaimService', () => {
   const { db, pool } = testDb();
@@ -41,5 +43,17 @@ describe('JobClaimService', () => {
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
     expect(first!.id).not.toBe(second!.id);
+  });
+
+  it('marks a running job waiting and records its runId', async () => {
+    const seeded = await seedJob(db);
+    await service.claimNext();
+
+    const runId = '11111111-1111-1111-1111-111111111111';
+    await service.markWaiting(seeded.id, runId);
+
+    const [row] = await db.select().from(jobs).where(eq(jobs.id, seeded.id));
+    expect(row.status).toBe('waiting');
+    expect(row.runId).toBe(runId);
   });
 });

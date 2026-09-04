@@ -18,7 +18,7 @@ export const jobs = pgTable(
     runId: uuid('run_id'),
     input: jsonb('input'),
     status: text('status', {
-      enum: ['pending', 'running', 'completed', 'failed'],
+      enum: ['pending', 'running', 'waiting', 'completed', 'failed'],
     })
       .notNull()
       .default('pending'),

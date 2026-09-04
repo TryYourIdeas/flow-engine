@@ -54,4 +54,10 @@ export class JobClaimService {
       UPDATE jobs SET status = 'failed', error = ${error}, updated_at = now() WHERE id = ${jobId}
     `);
   }
+
+  async markWaiting(jobId: string, runId: string): Promise<void> {
+    await this.db.execute(sql`
+      UPDATE jobs SET status = 'waiting', run_id = ${runId}, updated_at = now() WHERE id = ${jobId}
+    `);
+  }
 }
