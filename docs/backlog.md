@@ -1,5 +1,19 @@
 # Backlog
 
+## Real `LlmProviderPort` implementation(s)
+
+**Description:** `src/worker/graph-execution.worker.ts` always constructs `FakeLlmProvider`
+regardless of the `provider` field (`anthropic`/`openai`/`google`) on a graph's `llm` node. No
+real implementation of `LlmProviderPort` (`src/graph/llm-provider.port.ts`) exists yet — see
+[`known-issues/index.md`](known-issues/index.md).
+
+**Value:** Lets the engine produce real LLM output instead of canned tokens, which is required
+for any actual graph run to be useful.
+
+**Consequence of not having it:** The engine is not usable for real workloads in any
+environment — every run returns `FakeLlmProvider`'s fixed output regardless of the node's
+configured provider/model/prompt.
+
 ## Execution timeout for worker_thread-based graph runs
 
 **Description:** `WorkerRunnerService` has no timeout — if a worker hangs (infinite loop, deadlocked
