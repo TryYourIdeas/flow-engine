@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted (2026-08-27)
+Accepted (2026-08-27). **Update (2026-09-04)**: the claiming mechanism below is unchanged, but the
+table it claims from is no longer a single cross-tenant `jobs` table — see
+[ADR-0005](0005-shared-multi-tenant-database.md). Each tenant now has its own `flow_jobs` table
+(no `tenantId` column; it's implicit in which schema the row lives in), and
+`ExecutionOrchestratorService` round-robins this same `claimNext()` query across tenant schemas
+instead of calling it once against one global table.
 
 ## Context
 

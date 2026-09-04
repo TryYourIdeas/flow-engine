@@ -51,16 +51,3 @@ returns `FakeLlmProvider`'s canned tokens.
 `node.data.provider`) and select it in the worker instead of the hardcoded fake — not yet
 tracked as a dated backlog item.
 
-## `InboxTaskPort` has no real implementation
-
-**Where**: `src/graph/inbox-task.port.ts`, `src/graph/fake-inbox-task-writer.ts`.
-
-**Issue**: the orchestrator calls `InboxTaskPort.createTask()` when a form node interrupts, but the
-only implementation wired anywhere is `FakeInboxTaskWriter` (in-memory, used only in tests). No
-production code path writes an actual durable inbox task.
-
-**Current impact**: a run that hits a form node pauses (`jobs.status = 'waiting'`) but nothing
-outside the test suite is ever notified — there is no way, today, for a real human to answer it.
-
-**Fix, if/when it matters**: see the "Real `InboxTaskPort` implementation" entry in
-[`../backlog.md`](../backlog.md).

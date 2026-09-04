@@ -2,6 +2,22 @@
 
 Summary of work done, most recent first.
 
+## 2026-09-04 — Shared multi-tenant database with home
+
+Replaced the single cross-tenant `jobs` table (and flow-engine's own dedicated Postgres database)
+with a per-tenant `flow_jobs` table living in home's own database — flow-engine now connects to
+the same Postgres instance as home and resolves a tenant-scoped connection per job
+(`TenantDbFactory`), discovering which tenants have pending work via a new `TenantRegistryService`
+that queries home's `public.tenants` table. `ExecutionOrchestratorService` round-robins job
+claiming across tenant schemas instead of claiming from one global table. LangGraph's
+`PostgresSaver` checkpoint tables now live per-tenant-schema too. `TenantInboxTaskWriter` replaces
+`FakeInboxTaskWriter` as the real, production `InboxTaskPort` implementation — resolving that
+backlog item, since flow-engine already holds a tenant-scoped connection for job claiming. Also
+fixed a pre-existing bug where `AppModule` never actually provided a value for the orchestrator's
+inbox-writer dependency, so the module would have thrown on boot in production. See
+[ADR-0005](architecture/ADR/0005-shared-multi-tenant-database.md) and home's
+[ADR-0008](../../home/docs/architecture/ADR/0008-shared-multi-tenant-database-for-flow-engine.md).
+
 ## 2026-09-04 — Form node engine support
 
 Generalized `GraphInterpreter` from a single hardcoded `llm` node to walking an arbitrary

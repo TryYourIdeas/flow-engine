@@ -69,21 +69,6 @@ to notice and fix.
 kills), `running` jobs will accumulate that never complete and are never retried, with no automated
 way to detect or recover them short of a manual database query and update.
 
-## Real `InboxTaskPort` implementation
-
-**Description:** The orchestrator depends on `InboxTaskPort` to durably record a paused run's
-pending human input; only `FakeInboxTaskWriter` (in-memory, test-only) exists. A real
-implementation needs to write into `home`'s tenant-scoped `inbox_tasks` table, which requires
-resolving the engine's tenant-DB credential/grant model (see
-`agent-builder/docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md` Section 4,
-still open).
-
-**Value:** Without it, a form/HITL node can pause a run but the pause is never durably surfaced to
-a human anywhere — the run is stuck `waiting` forever.
-
-**Consequence of not having it:** The Form node feature is not usable end-to-end in any real
-environment.
-
 ## Move `PostgresSaver.setup()` out of the per-execution worker
 
 **Description:** `graph-execution.worker.ts` calls `checkpointer.setup()` on every worker spawn.
