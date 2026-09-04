@@ -139,4 +139,77 @@ describe('GraphInterpreter', () => {
 
     await expect(collect()).rejects.toThrow("Unknown entryNodeId 'missing'");
   });
+
+  it('pauses on a form node and resumes with submitted field values in state', async () => {
+    const provider = new FakeLlmProvider(['after-form']);
+    const checkpointer = new MemorySaver();
+    const interpreter = new GraphInterpreter(provider, checkpointer);
+    const definition: GraphDefinition = {
+      entryNodeId: 'form-1',
+      nodes: [
+        {
+          id: 'form-1',
+          type: 'form',
+          data: {
+            label: 'Approval',
+            prompt: 'Please review and approve',
+            assigneeMode: 'launcher',
+            fields: [
+              { key: 'approved', label: 'Approved?', type: 'boolean', required: true },
+            ],
+          },
+        },
+        {
+          id: 'llm-1',
+          type: 'llm',
+          data: {
+            systemPrompt: 'continue',
+            provider: 'anthropic',
+            model: 'claude-test',
+            temperature: 0.5,
+          },
+        },
+      ],
+      edges: [{ source: 'form-1', target: 'llm-1' }],
+      stateSchema: { fields: [{ key: 'approved', type: 'boolean' }] },
+    };
+
+    const startEvents: unknown[] = [];
+    for await (const event of interpreter.run(definition, 'run-form-1', {
+      kind: 'start',
+      input: 'Hello',
+    })) {
+      startEvents.push(event);
+    }
+
+    expect(startEvents).toEqual([
+      {
+        kind: 'interrupted',
+        nodeId: 'form-1',
+        prompt: 'Please review and approve',
+        fields: [
+          { key: 'approved', label: 'Approved?', type: 'boolean', required: true },
+        ],
+        assigneeMode: 'launcher',
+        assigneeUserId: undefined,
+      },
+    ]);
+
+    const resumeEvents: unknown[] = [];
+    for await (const event of interpreter.run(definition, 'run-form-1', {
+      kind: 'resume',
+      resumeValues: { approved: true },
+    })) {
+      resumeEvents.push(event);
+    }
+
+    expect(resumeEvents).toEqual([
+      { kind: 'token', nodeId: 'llm-1', token: 'after-form' },
+    ]);
+
+    const tuple = await checkpointer.getTuple({
+      configurable: { thread_id: 'run-form-1' },
+    });
+    expect(tuple?.checkpoint.channel_values.approved).toBe(true);
+  });
 });

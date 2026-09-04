@@ -3,16 +3,31 @@ import {
   Annotation,
   START,
   END,
+  interrupt,
+  Command,
+  isInterrupted,
+  INTERRUPT,
   type BaseCheckpointSaver,
 } from '@langchain/langgraph';
-import type { GraphDefinition, GraphNode, StateField } from './graph-definition.types';
+import type {
+  GraphDefinition,
+  GraphNode,
+  StateField,
+  FormField,
+} from './graph-definition.types';
 import type { LlmProviderPort } from './llm-provider.port';
 
-export interface InterpreterEvent {
-  kind: 'token';
+export interface FormInterruptPayload {
   nodeId: string;
-  token: string;
+  prompt: string;
+  fields: FormField[];
+  assigneeMode: 'launcher' | 'specific_user';
+  assigneeUserId?: string;
 }
+
+export type InterpreterEvent =
+  | { kind: 'token'; nodeId: string; token: string }
+  | ({ kind: 'interrupted' } & FormInterruptPayload);
 
 export interface InterpreterStartInput {
   kind: 'start';
@@ -65,6 +80,22 @@ function buildNodeHandler(
     };
   }
 
+  if (node.type === 'form') {
+    return async () => {
+      const resumeValues = interrupt<
+        FormInterruptPayload,
+        Record<string, unknown>
+      >({
+        nodeId: node.id,
+        prompt: node.data.prompt,
+        fields: node.data.fields,
+        assigneeMode: node.data.assigneeMode,
+        assigneeUserId: node.data.assigneeUserId,
+      });
+      return resumeValues;
+    };
+  }
+
   throw new Error(`Unsupported node type '${(node as GraphNode).type}'`);
 }
 
@@ -108,12 +139,22 @@ export class GraphInterpreter {
     const compiled = graph.compile({ checkpointer: this.checkpointer });
     const config = { configurable: { thread_id: runId } };
     const invokeInput =
-      input.kind === 'start' ? { input: input.input } : input;
+      input.kind === 'start'
+        ? { input: input.input }
+        : new Command({ resume: input.resumeValues });
 
-    await compiled.invoke(invokeInput, config);
+    const result = await compiled.invoke(invokeInput, config);
 
     for (const event of events) {
       yield event;
+    }
+
+    if (isInterrupted<FormInterruptPayload>(result)) {
+      const payload = result[INTERRUPT][0]?.value;
+      if (!payload) {
+        throw new Error('graph interrupted with no payload');
+      }
+      yield { kind: 'interrupted', ...payload };
     }
   }
 }
