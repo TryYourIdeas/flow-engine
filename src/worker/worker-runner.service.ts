@@ -23,7 +23,11 @@ export class WorkerRunnerService {
 
     worker.on('message', (message: WorkerMessage) => {
       messages.push(message);
-      if (message.kind === 'done' || message.kind === 'error') {
+      if (
+        message.kind === 'done' ||
+        message.kind === 'error' ||
+        message.kind === 'waiting_for_input'
+      ) {
         finished = true;
       }
       resolveNext?.();
@@ -51,7 +55,11 @@ export class WorkerRunnerService {
         while (messages.length > 0) {
           const message = messages.shift()!;
           yield message;
-          if (message.kind === 'done' || message.kind === 'error') {
+          if (
+            message.kind === 'done' ||
+            message.kind === 'error' ||
+            message.kind === 'waiting_for_input'
+          ) {
             return;
           }
         }
