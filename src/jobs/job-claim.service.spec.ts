@@ -1,43 +1,53 @@
 import { eq } from 'drizzle-orm';
 import { JobClaimService } from './job-claim.service';
-import { testDb, seedJob, clearJobs } from '../db/test/seed';
-import { jobs } from '../db/schema/public';
+import {
+  testTenantDbFactory,
+  ensureTenantSchema,
+  seedFlowJob,
+  clearTenantSchema,
+} from '../db/test/seed';
+import { flowJobs } from '../db/schema/tenant';
 
 describe('JobClaimService', () => {
-  const { db, pool } = testDb();
-  const service = new JobClaimService(db);
+  const tenantDbFactory = testTenantDbFactory();
+  const service = new JobClaimService(tenantDbFactory);
+  const schemaName = 'tenant_test_job_claim';
+
+  beforeAll(async () => {
+    await ensureTenantSchema(schemaName);
+  });
 
   afterEach(async () => {
-    await clearJobs(db);
+    await clearTenantSchema(tenantDbFactory, schemaName);
   });
 
   afterAll(async () => {
-    await pool.end();
+    await tenantDbFactory.closeAll();
   });
 
-  it('claims a pending job and marks it running', async () => {
-    const seeded = await seedJob(db);
+  it('claims a pending job in the given tenant schema and marks it running', async () => {
+    const seeded = await seedFlowJob(tenantDbFactory, schemaName);
 
-    const claimed = await service.claimNext();
+    const claimed = await service.claimNext(schemaName);
 
     expect(claimed).not.toBeNull();
     expect(claimed!.id).toBe(seeded.id);
-    expect(claimed!.tenantId).toBe('tenant-1');
-    expect(claimed!.graphId).toBe('graph-1');
+    expect(claimed!.schemaName).toBe(schemaName);
+    expect(claimed!.graphId).toBe(seeded.graphId);
   });
 
-  it('returns null when there is no pending job', async () => {
-    const claimed = await service.claimNext();
+  it('returns null when there is no pending job in that schema', async () => {
+    const claimed = await service.claimNext(schemaName);
     expect(claimed).toBeNull();
   });
 
-  it('never lets two concurrent claims return the same job', async () => {
-    await seedJob(db);
-    await seedJob(db);
+  it('never lets two concurrent claims in the same schema return the same job', async () => {
+    await seedFlowJob(tenantDbFactory, schemaName);
+    await seedFlowJob(tenantDbFactory, schemaName);
 
     const [first, second] = await Promise.all([
-      service.claimNext(),
-      service.claimNext(),
+      service.claimNext(schemaName),
+      service.claimNext(schemaName),
     ]);
 
     expect(first).not.toBeNull();
@@ -46,13 +56,14 @@ describe('JobClaimService', () => {
   });
 
   it('marks a running job waiting and records its runId', async () => {
-    const seeded = await seedJob(db);
-    await service.claimNext();
+    const seeded = await seedFlowJob(tenantDbFactory, schemaName);
+    await service.claimNext(schemaName);
 
-    const runId = '11111111-1111-1111-1111-111111111111';
-    await service.markWaiting(seeded.id, runId);
+    const runId = '33333333-3333-3333-3333-333333333333';
+    await service.markWaiting(schemaName, seeded.id, runId);
 
-    const [row] = await db.select().from(jobs).where(eq(jobs.id, seeded.id));
+    const db = tenantDbFactory.getTenantDb(schemaName);
+    const [row] = await db.select().from(flowJobs).where(eq(flowJobs.id, seeded.id));
     expect(row.status).toBe('waiting');
     expect(row.runId).toBe(runId);
   });

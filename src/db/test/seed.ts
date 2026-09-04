@@ -45,7 +45,18 @@ export async function clearTenants(db: ReturnType<typeof createDb>['db']) {
  * docs/superpowers/plans/2026-08-27-flow-engine-core.md).
  */
 export async function ensureTenantSchema(schemaName: string) {
-  const { db } = testDb();
+  const { db, pool } = testDb();
+  try {
+    await createTenantSchemaAndTables(db, schemaName);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function createTenantSchemaAndTables(
+  db: ReturnType<typeof createDb>['db'],
+  schemaName: string,
+) {
   await db.execute(sql.raw(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`));
   await db.execute(
     sql.raw(`
