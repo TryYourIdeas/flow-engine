@@ -2,6 +2,14 @@
 
 Summary of work done, most recent first.
 
+## 2026-09-04 — Form node engine support
+
+Generalized `GraphInterpreter` from a single hardcoded `llm` node to walking an arbitrary
+multi-node graph, and added a `form` node type that pauses execution via LangGraph `interrupt()`,
+checkpoints via `PostgresSaver`, and resumes via a new `resume` job type. See
+[ADR-0004](architecture/ADR/0004-langgraph-interrupt-resume-for-form-hitl-nodes.md) and
+`home/docs/superpowers/specs/2026-09-04-flow-builder-form-node-design.md`.
+
 ## 2026-08-27 (initial engine build: job queue, worker-isolated graph execution, progress streaming)
 
 - **Scaffolded the project**: NestJS starter (`config: initial NestJS scaffold`), no HTTP

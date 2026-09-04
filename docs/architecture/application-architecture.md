@@ -20,18 +20,23 @@ flowchart TB
         WorkerEntry["graph-execution.worker.ts"]
         Interpreter["GraphInterpreter"]
         Fake["FakeLlmProvider"]
+        Checkpointer["PostgresSaver"]
         WorkerEntry --> Interpreter
         Interpreter --> Fake
+        Interpreter --> Checkpointer
     end
 
+    Inbox["InboxTaskPort\n(FakeInboxTaskWriter only)"]
     DB[("Postgres: jobs table")]
     Notify(["pg_notify: run:<jobId>"])
 
     Claim -- "SELECT ... FOR UPDATE SKIP LOCKED" --> DB
     Runner -- "spawn + postMessage" --> WorkerEntry
-    WorkerEntry -- "postMessage(token/done/error)" --> Runner
+    WorkerEntry -- "postMessage(token/waiting_for_input/done/error)" --> Runner
     Progress -- "pg_notify()" --> Notify
     Claim -- "UPDATE status" --> DB
+    Orch -- "createTask() on waiting_for_input" --> Inbox
+    Checkpointer -- "checkpoint reads/writes" --> DB
 ```
 
 ## Layers
@@ -51,7 +56,11 @@ flowchart TB
   `GraphInterpreter` (with `FakeLlmProvider` hardcoded, see
   [`known-issues/index.md`](../known-issues/index.md)) and posts messages back to the parent.
 - **`src/graph/graph-interpreter.ts`** — compiles a `GraphDefinition` into a
-  `@langchain/langgraph` `StateGraph` and runs it.
+  `@langchain/langgraph` `StateGraph` and runs it, walking an arbitrary multi-node graph (not
+  just a single `llm` node) and dispatching `llm`/`form` node handlers.
+- **`src/graph/inbox-task.port.ts`, `src/graph/fake-inbox-task-writer.ts`** — the durable-inbox
+  write boundary a `form` node's pause writes through; only an in-memory test double exists today,
+  see [`known-issues/index.md`](../known-issues/index.md).
 - **`src/progress/progress-publisher.service.ts`** — publishes `WorkerMessage`s via
   `pg_notify`.
 - **`src/db/client.ts`, `src/db/schema/public.ts`** — shared Postgres pool/Drizzle setup and
@@ -74,3 +83,11 @@ execution is offloaded to a `worker_thread` (see
 [ADR-0001](ADR/0001-worker-thread-isolation-for-graph-execution.md)) so the main thread stays
 free to keep polling — though today's orchestrator still `await`s that worker to finish before
 claiming the next job, so per-instance throughput is effectively serial regardless.
+
+## Human-in-the-loop pause/resume
+
+A `form` node's handler calls LangGraph's `interrupt()`, checkpointed via `PostgresSaver` (thread
+id = the run's `runId`). The orchestrator reacts to this as a third outcome alongside
+complete/fail: it writes an inbox task via `InboxTaskPort` and marks the job `waiting`. A `resume`
+job later reloads the same checkpoint and continues — see
+[ADR-0004](ADR/0004-langgraph-interrupt-resume-for-form-hitl-nodes.md).
