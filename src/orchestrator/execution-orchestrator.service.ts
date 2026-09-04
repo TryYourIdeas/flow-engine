@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { JobClaimService } from '../jobs/job-claim.service';
 import { WorkerRunnerService } from '../worker/worker-runner.service';
 import { ProgressPublisherService } from '../progress/progress-publisher.service';
-import type { InboxTaskPort } from '../graph/inbox-task.port';
+import { TenantRegistryService } from '../tenants/tenant-registry.service';
+import { TenantInboxTaskWriter } from '../graph/tenant-inbox-task-writer';
 import type { ClaimedJob } from '../jobs/job.types';
 import type {
   RunJobInput,
@@ -13,21 +14,43 @@ import type {
 
 @Injectable()
 export class ExecutionOrchestratorService {
+  private cursor = 0;
+
   constructor(
+    private readonly tenantRegistry: TenantRegistryService,
     private readonly jobClaimService: JobClaimService,
     private readonly workerRunnerService: WorkerRunnerService,
     private readonly progressPublisherService: ProgressPublisherService,
-    private readonly inboxTaskWriter: InboxTaskPort,
+    private readonly inboxTaskWriter: TenantInboxTaskWriter,
   ) {}
 
-  /** Claims and fully runs one pending job. Returns false if none was pending. */
+  /**
+   * Claims and fully runs one pending job from whichever tenant schema has
+   * one, round-robining across tenants (starting from the schema after the
+   * one that yielded work last time) so no single tenant can starve the
+   * others under sustained load. Returns false if no tenant had a pending
+   * job.
+   */
   async processNext(): Promise<boolean> {
-    const job = await this.jobClaimService.claimNext();
-    if (!job) return false;
+    const schemas = await this.tenantRegistry.listTenantSchemas();
+    if (schemas.length === 0) return false;
 
-    const runId = job.runId ?? job.id;
-    const workerInput = this.buildWorkerInput(job, runId);
+    for (let offset = 0; offset < schemas.length; offset++) {
+      const index = (this.cursor + offset) % schemas.length;
+      const schemaName = schemas[index]!;
+      const job = await this.jobClaimService.claimNext(schemaName);
+      if (job) {
+        this.cursor = (index + 1) % schemas.length;
+        await this.processJob(job);
+        return true;
+      }
+    }
 
+    return false;
+  }
+
+  private async processJob(job: ClaimedJob): Promise<void> {
+    const workerInput = this.buildWorkerInput(job);
     let alreadyResolved = false;
 
     try {
@@ -36,25 +59,25 @@ export class ExecutionOrchestratorService {
 
         if (message.kind === 'error') {
           alreadyResolved = true;
-          await this.jobClaimService.fail(job.id, message.message);
-          return true;
+          await this.jobClaimService.fail(job.schemaName, job.id, message.message);
+          return;
         }
 
         if (message.kind === 'waiting_for_input') {
           alreadyResolved = true;
           await this.inboxTaskWriter.createTask({
-            tenantId: job.tenantId,
-            runId,
+            schemaName: job.schemaName,
+            runId: job.runId ?? job.id,
             nodeId: message.nodeId,
             prompt: message.prompt,
             fields: message.fields,
             assigneeUserId: this.resolveAssignee(message, job),
           });
-          await this.jobClaimService.markWaiting(job.id, runId);
-          return true;
+          await this.jobClaimService.markWaiting(job.schemaName, job.id, job.runId ?? job.id);
+          return;
         }
       }
-      await this.jobClaimService.complete(job.id);
+      await this.jobClaimService.complete(job.schemaName, job.id);
     } catch (err) {
       if (alreadyResolved) {
         // The job already reached a terminal outcome above; jobClaimService
@@ -69,10 +92,8 @@ export class ExecutionOrchestratorService {
         kind: 'error',
         message: errorMessage,
       });
-      await this.jobClaimService.fail(job.id, errorMessage);
+      await this.jobClaimService.fail(job.schemaName, job.id, errorMessage);
     }
-
-    return true;
   }
 
   private resolveAssignee(
@@ -90,12 +111,13 @@ export class ExecutionOrchestratorService {
     return job.userId;
   }
 
-  private buildWorkerInput(job: ClaimedJob, runId: string): WorkerData {
+  private buildWorkerInput(job: ClaimedJob): WorkerData {
+    const runId = job.runId ?? job.id;
     if (job.type === 'run') {
       const { definition, input } = job.input as RunJobInput;
-      return { kind: 'start', runId, definition, input };
+      return { kind: 'start', runId, schemaName: job.schemaName, definition, input };
     }
     const { definition, resumeValues } = job.input as ResumeJobInput;
-    return { kind: 'resume', runId, definition, resumeValues };
+    return { kind: 'resume', runId, schemaName: job.schemaName, definition, resumeValues };
   }
 }
