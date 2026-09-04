@@ -15,6 +15,20 @@
       "when": 1787850308619,
       "tag": "0001_watery_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788558160354,
+      "tag": "0002_cynical_mongoose",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788558169149,
+      "tag": "0003_goofy_blacklash",
+      "breakpoints": true
     }
   ]
 }
