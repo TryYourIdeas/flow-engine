@@ -11,8 +11,8 @@ export interface ResumeJobInput {
 }
 
 export type WorkerData =
-  | ({ kind: 'start'; runId: string } & RunJobInput)
-  | ({ kind: 'resume'; runId: string } & ResumeJobInput);
+  | ({ kind: 'start'; runId: string; schemaName: string } & RunJobInput)
+  | ({ kind: 'resume'; runId: string; schemaName: string } & ResumeJobInput);
 
 export type WorkerMessage =
   | { kind: 'token'; nodeId: string; token: string }

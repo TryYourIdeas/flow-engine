@@ -13,7 +13,13 @@ async function main() {
   const connectionString =
     process.env.DATABASE_URL ??
     'postgres://flow_engine:flow_engine@localhost:5433/flow_engine';
-  const checkpointer = PostgresSaver.fromConnString(connectionString);
+  // Checkpoint tables live inside the run's own tenant schema (see
+  // docs/architecture/ADR/0005-shared-multi-tenant-database.md) - the
+  // schema option is what LangGraph's PostgresSaver uses to scope its own
+  // checkpoints/checkpoint_writes tables there instead of "public".
+  const checkpointer = PostgresSaver.fromConnString(connectionString, {
+    schema: data.schemaName,
+  });
   await checkpointer.setup();
 
   // NOTE: FakeLlmProvider is a placeholder wired here so this task is

@@ -27,6 +27,7 @@ describe('WorkerRunnerService', () => {
     for await (const message of service.run({
       kind: 'start',
       runId: 'wr-run-1',
+      schemaName: 'tenant_test_worker_runner',
       definition: llmOnlyDefinition,
       input: { input: 'hi' },
     })) {
@@ -51,6 +52,7 @@ describe('WorkerRunnerService', () => {
     for await (const message of service.run({
       kind: 'start',
       runId: 'wr-run-2',
+      schemaName: 'tenant_test_worker_runner',
       definition: invalidDefinition,
       input: { input: 'hi' },
     })) {
@@ -88,6 +90,7 @@ describe('WorkerRunnerService', () => {
     for await (const message of service.run({
       kind: 'start',
       runId: `wr-run-3-${Date.now()}`,
+      schemaName: 'tenant_test_worker_runner',
       definition,
       input: { input: 'hi' },
     })) {
