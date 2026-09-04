@@ -5,7 +5,7 @@ describe('FakeInboxTaskWriter', () => {
     const writer = new FakeInboxTaskWriter();
 
     await writer.createTask({
-      tenantId: 'tenant-1',
+      schemaName: 'tenant_test',
       runId: 'run-1',
       nodeId: 'form-1',
       prompt: 'Approve?',
@@ -15,7 +15,7 @@ describe('FakeInboxTaskWriter', () => {
 
     expect(writer.tasks).toEqual([
       {
-        tenantId: 'tenant-1',
+        schemaName: 'tenant_test',
         runId: 'run-1',
         nodeId: 'form-1',
         prompt: 'Approve?',

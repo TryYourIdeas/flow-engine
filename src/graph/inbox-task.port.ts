@@ -1,7 +1,7 @@
 import type { FormField } from './graph-definition.types';
 
 export interface InboxTask {
-  tenantId: string;
+  schemaName: string;
   runId: string;
   nodeId: string;
   prompt: string;
