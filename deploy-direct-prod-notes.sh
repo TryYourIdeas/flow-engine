@@ -20,6 +20,15 @@ if [ -n "$BUILD_DIRECTORY" ]; then
     mv $BUILD_DIRECTORY .output
 fi
 
+COPY_PACKAGE_JSON=$(jq -r '.copyPackageJson' ./project-config.json)
+
+if [ "$COPY_PACKAGE_JSON" = "true" ]; then
+    cp package.json .output/
+    cp package-lock.json .output/
+fi
+
+cp project-config.json .output/
+
 # using -f to add node_modules
 git add .output -f
 git add RELEASE_NOTES.txt

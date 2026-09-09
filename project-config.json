@@ -3,5 +3,6 @@
     "server": "juanlabrada",
     "testServer": "others",
     "buildDirectory": "dist",
-    "runFile": "index.mjs"
+    "runFile": "src/main.js",
+    "copyPackageJson": true
 }
