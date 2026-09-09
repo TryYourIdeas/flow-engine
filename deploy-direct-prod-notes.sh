@@ -14,6 +14,12 @@ cat RELEASE_NOTES.txt >> NEW_RELEASE_NOTES.txt
 rm RELEASE_NOTES.txt
 mv NEW_RELEASE_NOTES.txt RELEASE_NOTES.txt
 
+BUILD_DIRECTORY=$(jq -r '.buildDirectory' ./project-config.json)
+
+if [ -n "$BUILD_DIRECTORY" ]; then
+    mv $BUILD_DIRECTORY .output
+fi
+
 # using -f to add node_modules
 git add .output -f
 git add RELEASE_NOTES.txt
