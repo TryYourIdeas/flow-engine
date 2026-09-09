@@ -1,4 +1,8 @@
 =================================
+Release version 0.0.8
+------------------------------
+6f9a401 config: remove old build 5fcabd5 config: deploy package.json 831bd51 Release version: 0.0.7
+=================================
 Release version 0.0.7
 ------------------------------
 b8d9f6a config: dist directory 72f7074 Release version: 0.0.6

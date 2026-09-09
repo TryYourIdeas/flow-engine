@@ -1,0 +1,8 @@
+{
+    "domain": "flow-engine.tryyourideas.com",
+    "server": "juanlabrada",
+    "testServer": "others",
+    "buildDirectory": "dist",
+    "runFile": "src/main.js",
+    "copyPackageJson": true
+}
