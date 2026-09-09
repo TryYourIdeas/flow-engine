@@ -1,4 +1,8 @@
 =================================
+Release version 0.0.7
+------------------------------
+b8d9f6a config: dist directory 72f7074 Release version: 0.0.6
+=================================
 Release version 0.0.6
 ------------------------------
 986c447 config: config deploy flow e419e17 Release version: 0.0.5 6bdcc99 Release version: 0.0.4 ec35f97 Release version: 0.0.3 c6ecb83 config: production deploy
