@@ -1,10 +1,11 @@
 # Features
 
-`flow-engine` is a standalone NestJS worker process (no HTTP surface — it boots via
-`NestFactory.createApplicationContext`) that executes LangGraph-based agent flows queued by
-another application (e.g. `agent-builder`/`home`'s `/flow-builder`) and streams progress back
-over Postgres. It has no UI or API of its own; "the user" here is an operator running the process
-and the upstream apps that enqueue `jobs` rows and subscribe to progress.
+`flow-engine` is a standalone NestJS worker process that executes LangGraph-based agent flows
+queued by another application (e.g. `agent-builder`/`home`'s `/flow-builder`) and streams
+progress back over Postgres. It has no UI or API of its own beyond a single `GET /health`
+liveness endpoint (see [`architecture/technology-architecture.md`](../architecture/technology-architecture.md#runtime));
+"the user" here is an operator running the process and the upstream apps that enqueue `jobs` rows
+and subscribe to progress.
 
 ## Job queue and claiming
 

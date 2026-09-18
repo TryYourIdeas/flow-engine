@@ -46,12 +46,15 @@ flowchart TB
 
 ## Layers
 
-- **`src/main.ts`** — bootstraps a NestJS *application context* (no HTTP server:
-  `NestFactory.createApplicationContext`), enables shutdown hooks.
+- **`src/main.ts`** — bootstraps a NestJS application (`NestFactory.create`), listening on `PORT`
+  (default 4000) for the one mounted route, `GET /health`; enables shutdown hooks.
 - **`src/app.module.ts`** — wires all providers via factory functions sharing one
   `createDb()`-produced pool/Drizzle instance (home's `public.tenants` + `pg_notify`) and one
   `TenantDbFactory` (per-tenant-schema connections), and owns the poll loop
   (`onModuleInit`/`onModuleDestroy`).
+- **`src/health/`** — `HeartbeatService` (a 1s timer updating `lastHeartbeatAt`, independent of
+  the poll loop) and `HealthController` (`GET /health`, returning that timestamp). `home`'s
+  `GET /api/flow-builder/health` proxies this and judges staleness itself.
 - **`src/orchestrator/execution-orchestrator.service.ts`** — coordinates one job's full
   lifecycle: discover a tenant with pending work → claim → run worker → publish progress →
   complete/fail (or write an inbox task and mark `waiting`). The only class that spans the tenant
