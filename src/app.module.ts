@@ -12,6 +12,8 @@ import { WorkerRunnerService } from './worker/worker-runner.service';
 import { ProgressPublisherService } from './progress/progress-publisher.service';
 import { TenantInboxTaskWriter } from './graph/tenant-inbox-task-writer';
 import { ExecutionOrchestratorService } from './orchestrator/execution-orchestrator.service';
+import { HeartbeatService } from './health/heartbeat.service';
+import { HealthController } from './health/health.controller';
 
 // The same Postgres instance/database home uses (per home's
 // docs/architecture/ADR/0008-shared-multi-tenant-database-for-flow-engine.md)
@@ -25,6 +27,7 @@ const { db, pool } = createDb(connectionString);
 const tenantDbFactory = new TenantDbFactory(connectionString);
 
 @Module({
+  controllers: [HealthController],
   providers: [
     {
       provide: TenantRegistryService,
@@ -44,6 +47,7 @@ const tenantDbFactory = new TenantDbFactory(connectionString);
       useFactory: () => new TenantInboxTaskWriter(tenantDbFactory),
     },
     ExecutionOrchestratorService,
+    HeartbeatService,
   ],
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
