@@ -4,7 +4,7 @@
 
 | Layer | Technology |
 |---|---|
-| Runtime framework | NestJS 11 (application-context only, no HTTP adapter mounted) |
+| Runtime framework | NestJS 11 (Express HTTP adapter, serving only `GET /health`) |
 | Language | TypeScript |
 | Graph execution | `@langchain/langgraph` + `@langchain/core` (`StateGraph`) |
 | Concurrency isolation | Node.js `node:worker_thread`, one per execution |
@@ -20,12 +20,16 @@
 
 ## Runtime
 
-Single Node.js process per instance, no HTTP server or exposed port. `src/main.ts` boots via
-`NestFactory.createApplicationContext(AppModule)`; the process's only job is running the poll
-loop (`AppModule.onModuleInit()`) until terminated. `app.enableShutdownHooks()` wires
-`onModuleDestroy()` to `SIGTERM`/`SIGINT`. Horizontal scaling is done by running multiple
-instances against the same Postgres database — safe because job claiming is race-safe (see
-[ADR-0002](ADR/0002-postgres-select-for-update-skip-locked-job-queue.md)).
+Single Node.js process per instance. `src/main.ts` boots via `NestFactory.create(AppModule)` and
+listens on `PORT` (default 4000), but the only route mounted is `GET /health` — the process's
+real job is still running the poll loop (`AppModule.onModuleInit()`) until terminated, not serving
+HTTP traffic. `/health` returns `{ status: 'ok', lastHeartbeatAt: <ISO timestamp> }`, where
+`lastHeartbeatAt` is updated once a second by `HeartbeatService` on its own timer, independent of
+the poll loop's iteration cadence (a long-running job would otherwise make a healthy engine look
+stale). `app.enableShutdownHooks()` wires `onModuleDestroy()` to `SIGTERM`/`SIGINT`. Horizontal
+scaling is done by running multiple instances against the same Postgres database — safe because
+job claiming is race-safe (see [ADR-0002](ADR/0002-postgres-select-for-update-skip-locked-job-queue.md)).
+Each instance's `/health` only reflects its own heartbeat, not the fleet's.
 
 ## Local infrastructure
 
