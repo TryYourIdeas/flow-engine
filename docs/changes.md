@@ -9,6 +9,11 @@ Summary of work done, most recent first.
 orchestrator and progress-publisher specs now also have DB-free unit versions using in-memory
 fakes. The integration tests create a local stand-in for home's `public.tenants` table, which
 they previously assumed existed.
+## 2026-10-05 — Log the underlying Postgres cause of poll loop errors
+
+Drizzle wraps driver failures as `Failed query: ...`, which hid the real Postgres error (code,
+detail) from the poll loop log. `AppModule.pollLoop` now appends the error's `cause` (message,
+`code`, `detail`) to the logged message, so production logs name the actual failure.
 
 ## 2026-09-04 — Shared multi-tenant database with home
 
