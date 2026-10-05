@@ -1,4 +1,8 @@
 =================================
+Release version 0.1.0
+------------------------------
+3c0e519 Merge pull request #1 from TryYourIdeas/feat/health-endpoint a993ed1 docs: document the new GET /health endpoint 929106e feat: give flow-engine an HTTP transport and serve GET /health 1641bca feat: add GET /health controller c1cea9d feat: add HeartbeatService for engine liveness tracking e1a6e88 config: remove old build 6305e43 feature: add get logs 0bc0bfa Release version: 0.0.8
+=================================
 Release version 0.0.8
 ------------------------------
 6f9a401 config: remove old build 5fcabd5 config: deploy package.json 831bd51 Release version: 0.0.7

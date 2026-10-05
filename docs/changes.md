@@ -2,6 +2,12 @@
 
 Summary of work done, most recent first.
 
+## 2026-10-05 — Log the underlying Postgres cause of poll loop errors
+
+Drizzle wraps driver failures as `Failed query: ...`, which hid the real Postgres error (code,
+detail) from the poll loop log. `AppModule.pollLoop` now appends the error's `cause` (message,
+`code`, `detail`) to the logged message, so production logs name the actual failure.
+
 ## 2026-09-04 — Shared multi-tenant database with home
 
 Replaced the single cross-tenant `jobs` table (and flow-engine's own dedicated Postgres database)

@@ -1,3 +1,4 @@
+import { inspect } from 'node:util';
 import {
   Logger,
   Module,
@@ -25,6 +26,19 @@ const connectionString =
   'postgres://flow_engine:flow_engine@localhost:5433/flow_engine';
 const { db, pool } = createDb(connectionString);
 const tenantDbFactory = new TenantDbFactory(connectionString);
+
+// Drizzle wraps driver errors as "Failed query: ..." and keeps the real
+// Postgres error (code, detail, message) on `cause`. Surface it so the log
+// names the actual failure instead of only the wrapper message.
+function describeCause(err: unknown): string {
+  const cause = (err as { cause?: unknown } | null)?.cause;
+  if (cause === undefined) return '';
+  if (cause instanceof Error) {
+    const { code, detail } = cause as { code?: string; detail?: string };
+    return ` | cause: ${cause.message}${code ? ` (code=${code})` : ''}${detail ? ` detail=${detail}` : ''}`;
+  }
+  return ` | cause: ${inspect(cause)}`;
+}
 
 @Module({
   controllers: [HealthController],
@@ -73,7 +87,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
         ran = await this.orchestrator.processNext();
       } catch (err) {
         this.logger.error(
-          `poll loop iteration failed: ${err instanceof Error ? err.message : String(err)}`,
+          `poll loop iteration failed: ${err instanceof Error ? err.message : String(err)}${describeCause(err)}`,
           err instanceof Error ? err.stack : undefined,
         );
       }
