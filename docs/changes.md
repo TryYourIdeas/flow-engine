@@ -2,6 +2,13 @@
 
 Summary of work done, most recent first.
 
+## 2026-10-05 — Decouple unit tests from Postgres
+
+`npm test` no longer needs a running database. The six specs that touched Postgres are renamed
+`*.integration.spec.ts` and run via `npm run test:integration` (needs `DATABASE_URL`). The
+orchestrator and progress-publisher specs now also have DB-free unit versions using in-memory
+fakes. The integration tests create a local stand-in for home's `public.tenants` table, which
+they previously assumed existed.
 ## 2026-10-05 — Log the underlying Postgres cause of poll loop errors
 
 Drizzle wraps driver failures as `Failed query: ...`, which hid the real Postgres error (code,

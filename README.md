@@ -47,8 +47,12 @@ $ npm run start:prod
 ## Run tests
 
 ```bash
-# unit tests
+# unit tests (no database needed; collaborators are faked)
 $ npm run test
+
+# integration tests (*.integration.spec.ts; need Postgres at DATABASE_URL,
+# e.g. `docker compose up -d postgres`)
+$ npm run test:integration
 
 # e2e tests
 $ npm run test:e2e

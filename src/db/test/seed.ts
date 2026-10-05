@@ -44,6 +44,29 @@ export async function clearTenants(db: ReturnType<typeof createDb>['db']) {
  * schemas ... does not block on home's migrations landing" philosophy (see
  * docs/superpowers/plans/2026-08-27-flow-engine-core.md).
  */
+/**
+ * Creates public.tenants (if missing) with the columns flow-engine reads - a
+ * local stand-in for home's migration, which owns that table in real
+ * environments. Without it, any test touching the tenant registry fails with
+ * `relation "tenants" does not exist`.
+ */
+export async function ensureTenantsTable() {
+  const { db, pool } = testDb();
+  try {
+    await db.execute(
+      sql.raw(`
+      CREATE TABLE IF NOT EXISTS public.tenants (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        slug text NOT NULL UNIQUE,
+        schema_name text NOT NULL UNIQUE
+      )
+    `),
+    );
+  } finally {
+    await pool.end();
+  }
+}
+
 export async function ensureTenantSchema(schemaName: string) {
   const { db, pool } = testDb();
   try {
