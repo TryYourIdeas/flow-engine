@@ -1,9 +1,18 @@
 import { TenantRegistryService } from './tenant-registry.service';
-import { testDb, seedTenant, clearTenants } from '../db/test/seed';
+import {
+  testDb,
+  seedTenant,
+  clearTenants,
+  ensureTenantsTable,
+} from '../db/test/seed';
 
 describe('TenantRegistryService', () => {
   const { db, pool } = testDb();
   const service = new TenantRegistryService(db);
+
+  beforeAll(async () => {
+    await ensureTenantsTable();
+  });
 
   afterEach(async () => {
     await clearTenants(db);
