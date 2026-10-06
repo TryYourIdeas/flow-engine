@@ -1,4 +1,8 @@
 =================================
+Release version 0.1.2
+------------------------------
+dabf4c9 config: remove old build
+=================================
 Release version 0.2.0
 ------------------------------
 98066c8 config: remove old build ad147d4 Merge pull request #4 from TryYourIdeas/feat/log-node-env e36ae84 feat: log NODE_ENV on startup 9524f8d Release version: 0.1.1
