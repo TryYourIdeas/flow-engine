@@ -2,6 +2,11 @@
 
 Summary of work done, most recent first.
 
+## 2026-10-06 — Log NODE_ENV on startup
+
+`main.ts` now logs `NODE_ENV=<value>` (or `(unset)`) to the console once the app is created, just
+before it starts listening, so the environment each process runs in is visible in its logs.
+
 ## 2026-10-05 — Decouple unit tests from Postgres
 
 `npm test` no longer needs a running database. The six specs that touched Postgres are renamed
