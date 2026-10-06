@@ -4,6 +4,7 @@ exports.testDb = testDb;
 exports.testTenantDbFactory = testTenantDbFactory;
 exports.seedTenant = seedTenant;
 exports.clearTenants = clearTenants;
+exports.ensureTenantsTable = ensureTenantsTable;
 exports.ensureTenantSchema = ensureTenantSchema;
 exports.seedFlowJob = seedFlowJob;
 exports.clearTenantSchema = clearTenantSchema;
@@ -35,6 +36,21 @@ async function seedTenant(db, overrides = {}) {
 }
 async function clearTenants(db) {
     await db.delete(public_1.tenants);
+}
+async function ensureTenantsTable() {
+    const { db, pool } = testDb();
+    try {
+        await db.execute(drizzle_orm_1.sql.raw(`
+      CREATE TABLE IF NOT EXISTS public.tenants (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        slug text NOT NULL UNIQUE,
+        schema_name text NOT NULL UNIQUE
+      )
+    `));
+    }
+    finally {
+        await pool.end();
+    }
 }
 async function ensureTenantSchema(schemaName) {
     const { db, pool } = testDb();

@@ -15,6 +15,7 @@ export declare function seedTenant(db: ReturnType<typeof createDb>['db'], overri
     schemaName: string;
 }>;
 export declare function clearTenants(db: ReturnType<typeof createDb>['db']): Promise<void>;
+export declare function ensureTenantsTable(): Promise<void>;
 export declare function ensureTenantSchema(schemaName: string): Promise<void>;
 export declare function seedFlowJob(tenantDbFactory: TenantDbFactory, schemaName: string, overrides?: Partial<typeof flowJobs.$inferInsert>): Promise<{
     id: string;

@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var AppModule_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const node_util_1 = require("node:util");
 const common_1 = require("@nestjs/common");
 const client_1 = require("./db/client");
 const tenantDb_1 = require("./db/tenantDb");
@@ -26,6 +27,16 @@ const connectionString = process.env.DATABASE_URL ??
     'postgres://flow_engine:flow_engine@localhost:5433/flow_engine';
 const { db, pool } = (0, client_1.createDb)(connectionString);
 const tenantDbFactory = new tenantDb_1.TenantDbFactory(connectionString);
+function describeCause(err) {
+    const cause = err?.cause;
+    if (cause === undefined)
+        return '';
+    if (cause instanceof Error) {
+        const { code, detail } = cause;
+        return ` | cause: ${cause.message}${code ? ` (code=${code})` : ''}${detail ? ` detail=${detail}` : ''}`;
+    }
+    return ` | cause: ${(0, node_util_1.inspect)(cause)}`;
+}
 let AppModule = AppModule_1 = class AppModule {
     orchestrator;
     logger = new common_1.Logger(AppModule_1.name);
@@ -48,7 +59,7 @@ let AppModule = AppModule_1 = class AppModule {
                 ran = await this.orchestrator.processNext();
             }
             catch (err) {
-                this.logger.error(`poll loop iteration failed: ${err instanceof Error ? err.message : String(err)}`, err instanceof Error ? err.stack : undefined);
+                this.logger.error(`poll loop iteration failed: ${err instanceof Error ? err.message : String(err)}${describeCause(err)}`, err instanceof Error ? err.stack : undefined);
             }
             await new Promise((resolve) => setTimeout(resolve, ran ? 0 : 1000));
         }
