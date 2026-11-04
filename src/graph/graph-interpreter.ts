@@ -81,14 +81,21 @@ function buildNodeHandler(
   }
 
   if (node.type === 'form') {
-    return async () => {
+    return async (state: Record<string, unknown>) => {
+      // Prefill each field with what the global state already holds for it
+      // (e.g. values submitted by an earlier form step).
+      const fields = node.data.fields.map((field) =>
+        state[field.key] === undefined
+          ? field
+          : { ...field, value: state[field.key] },
+      );
       const resumeValues = interrupt<
         FormInterruptPayload,
         Record<string, unknown>
       >({
         nodeId: node.id,
         prompt: node.data.prompt,
-        fields: node.data.fields,
+        fields,
         assigneeMode: node.data.assigneeMode,
         assigneeUserId: node.data.assigneeUserId,
       });

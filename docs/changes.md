@@ -80,3 +80,10 @@ checkpoints via `PostgresSaver`, and resumes via a new `resume` job type. See
   connection (server restart, network blip) logs instead of crashing the process (`2df4d74`).
 - **Test stability**: flow-engine's Jest suite runs serially (`8d9870e`) to avoid cross-suite races
   on the shared `jobs` table, and a stale/hazardous e2e spec was removed (`0bd1c1c`).
+
+## Form steps prefill from the global state
+
+- A form node's interrupt payload now carries each field's current global-state value
+  (`FormField.value`, set in `buildNodeHandler` in `src/graph/graph-interpreter.ts`). The value is
+  stored with the inbox task's `fields` jsonb, so no migration is needed. Previously a second form
+  step opened blank even when an earlier step had already set the same keys.
