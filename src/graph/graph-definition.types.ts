@@ -11,6 +11,8 @@ export interface FormField {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'messages';
   required: boolean;
   helpText?: string;
+  /** Current value from the global state, set at pause time so the form can be prefilled. */
+  value?: unknown;
 }
 
 export interface FormNodeData {

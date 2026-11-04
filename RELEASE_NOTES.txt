@@ -1,4 +1,12 @@
 =================================
+Release version 0.1.2
+------------------------------
+dabf4c9 config: remove old build
+=================================
+Release version 0.2.0
+------------------------------
+98066c8 config: remove old build ad147d4 Merge pull request #4 from TryYourIdeas/feat/log-node-env e36ae84 feat: log NODE_ENV on startup 9524f8d Release version: 0.1.1
+=================================
 Release version 0.1.1
 ------------------------------
 9643414 config: remove old build 920992d Merge pull request #3 from TryYourIdeas/refactor/decouple-tests-from-postgres e8c6f8c Merge branch 'main' into refactor/decouple-tests-from-postgres 8a999af Merge pull request #2 from TryYourIdeas/bugfix/poll-loop-error-cause 1484e75 refactor: decouple unit tests from Postgres bba6e62 bugfix: log underlying Postgres cause of poll loop errors 7d0804d Release version: 0.1.0

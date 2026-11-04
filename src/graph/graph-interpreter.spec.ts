@@ -212,4 +212,60 @@ describe('GraphInterpreter', () => {
     });
     expect(tuple?.checkpoint.channel_values.approved).toBe(true);
   });
+  it('prefills a form node\'s fields with values already in the global state', async () => {
+    const interpreter = new GraphInterpreter(new FakeLlmProvider([]), new MemorySaver());
+    const definition: GraphDefinition = {
+      entryNodeId: 'form-1',
+      nodes: [
+        {
+          id: 'form-1',
+          type: 'form',
+          data: {
+            label: 'First',
+            prompt: 'Step 1',
+            assigneeMode: 'launcher',
+            fields: [{ key: 'name', label: 'Name', type: 'string', required: true }],
+          },
+        },
+        {
+          id: 'form-2',
+          type: 'form',
+          data: {
+            label: 'Second',
+            prompt: 'Step 2',
+            assigneeMode: 'launcher',
+            fields: [
+              { key: 'name', label: 'Name', type: 'string', required: true },
+              { key: 'age', label: 'Age', type: 'number', required: false },
+            ],
+          },
+        },
+      ],
+      edges: [{ source: 'form-1', target: 'form-2' }],
+      stateSchema: {
+        fields: [
+          { key: 'name', type: 'string' },
+          { key: 'age', type: 'number' },
+        ],
+      },
+    };
+
+    for await (const _ of interpreter.run(definition, 'run-prefill', { kind: 'start', input: 'x' })) {
+      // first form interrupts
+    }
+    const events: Array<{ kind: string; fields?: Array<{ key: string; value?: unknown }> }> = [];
+    for await (const event of interpreter.run(definition, 'run-prefill', {
+      kind: 'resume',
+      resumeValues: { name: 'Ada' },
+    })) {
+      events.push(event);
+    }
+
+    expect(events).toHaveLength(1);
+    expect(events[0].kind).toBe('interrupted');
+    expect(events[0].fields).toEqual([
+      { key: 'name', label: 'Name', type: 'string', required: true, value: 'Ada' },
+      { key: 'age', label: 'Age', type: 'number', required: false },
+    ]);
+  });
 });
