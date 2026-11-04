@@ -43,5 +43,6 @@ VERSION_TAG=$(node -p -e "require('./package.json').version")
 git tag -a production/current -m "Release version $VERSION_TAG"
 
 #push
+git push github
 git push production production/current
 
