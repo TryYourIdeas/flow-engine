@@ -18,7 +18,7 @@ configured provider/model/prompt.
 
 **Description:** `WorkerRunnerService` has no timeout — if a worker hangs (infinite loop, deadlocked
 call) without crashing or exiting, `run()`'s generator waits forever. The design doc
-(`docs/superpowers/plans/2026-08-27-flow-engine-core.md` in the `agent-builder` repo) and the
+(`docs/superpowers/plans/2026-08-27-flow-engine-core.md`) and the
 Phase 4 execution-panel spec call for a 30-minute wall-clock timeout, not yet implemented here.
 
 **Value:** Prevents a single hung execution from tying up a worker thread indefinitely and consuming

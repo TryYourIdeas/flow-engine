@@ -32,7 +32,7 @@ docker-compose local Postgres for integration-style specs.
   `FakeInboxTaskWriter` test double (mirroring `LlmProviderPort`/`FakeLlmProvider`); the real
   implementation depends on `home`'s `inbox_tasks` table existing (see the `home`-side plan) and on
   the engine's tenant-DB credential/grant model, which is an open question in
-  `agent-builder/docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md` Section
+  `docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md` Section
   4 not resolved here.
 - The `home`-side run producer, `/inbox` page, and `inbox_tasks` table/API — separate plan.
 - Execution timeout, worker pooling, orphaned-job recovery, per-tenant fairness — pre-existing,
@@ -1432,7 +1432,7 @@ Accepted
 The Form node (see `home/docs/superpowers/specs/2026-09-04-flow-builder-form-node-design.md`) needs
 to pause a run for human input that can take minutes to days, and resume on any engine instance
 without the original worker still being alive. The prior architecture doc
-(`agent-builder/docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md`, Section
+(`docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md`, Section
 2.5) already chose LangGraph's checkpointing primitives for this; this ADR records the concrete
 implementation.
 
@@ -1484,7 +1484,7 @@ Append to `docs/backlog.md`:
 pending human input; only `FakeInboxTaskWriter` (in-memory, test-only) exists. A real
 implementation needs to write into `home`'s tenant-scoped `inbox_tasks` table, which requires
 resolving the engine's tenant-DB credential/grant model (see
-`agent-builder/docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md` Section 4,
+`docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md` Section 4,
 still open).
 
 **Value:** Without it, a form/HITL node can pause a run but the pause is never durably surfaced to

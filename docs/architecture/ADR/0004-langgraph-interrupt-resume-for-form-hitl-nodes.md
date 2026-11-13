@@ -7,7 +7,7 @@ Accepted
 The Form node (see `home/docs/superpowers/specs/2026-09-04-flow-builder-form-node-design.md`) needs
 to pause a run for human input that can take minutes to days, and resume on any engine instance
 without the original worker still being alive. The prior architecture doc
-(`agent-builder/docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md`, Section
+(`docs/superpowers/specs/2026-08-27-execution-engine-architecture-design.md`, Section
 2.5) already chose LangGraph's checkpointing primitives for this; this ADR records the concrete
 implementation.
 
